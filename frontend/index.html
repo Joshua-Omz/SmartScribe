@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SmartScribe – Healthcare Voice to Text</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #f0f4f8;
+      color: #1a202c;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    header h1 {
+      font-size: 2rem;
+      color: #2b6cb0;
+    }
+
+    header p {
+      color: #718096;
+      margin-top: 0.25rem;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 1rem;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      padding: 2rem;
+      width: 100%;
+      max-width: 540px;
+    }
+
+    .controls {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      margin-bottom: 1.5rem;
+    }
+
+    button {
+      padding: 0.65rem 1.5rem;
+      border: none;
+      border-radius: 0.5rem;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, opacity 0.2s;
+    }
+
+    button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    #startBtn {
+      background: #2b6cb0;
+      color: #fff;
+    }
+
+    #startBtn:not(:disabled):hover { background: #2c5282; }
+
+    #stopBtn {
+      background: #e53e3e;
+      color: #fff;
+    }
+
+    #stopBtn:not(:disabled):hover { background: #c53030; }
+
+    #status {
+      text-align: center;
+      font-size: 0.9rem;
+      color: #718096;
+      min-height: 1.4rem;
+      margin-bottom: 1rem;
+    }
+
+    #status.recording { color: #e53e3e; font-weight: 600; }
+
+    #result {
+      background: #ebf8ff;
+      border: 1px solid #bee3f8;
+      border-radius: 0.5rem;
+      padding: 1rem;
+      min-height: 4rem;
+      font-size: 0.95rem;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      display: none;
+    }
+
+    #result.visible { display: block; }
+
+    .result-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #4a5568;
+      margin-bottom: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🩺 SmartScribe</h1>
+    <p>Healthcare voice-to-text transcription</p>
+  </header>
+
+  <div class="card">
+    <div class="controls">
+      <button id="startBtn">▶ Start Recording</button>
+      <button id="stopBtn" disabled>⏹ Stop Recording</button>
+    </div>
+
+    <p id="status">Press "Start Recording" to begin.</p>
+
+    <div id="result">
+      <div class="result-label">Transcription</div>
+      <div id="transcriptionText"></div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
