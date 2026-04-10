@@ -32,22 +32,62 @@ Security & Integration (Java): A secure, mock SmartMRS REST API built referencin
 
 ⚙️ Quick Start (Development)
 
+**Prerequisites:** [Go 1.21+](https://go.dev/dl/) installed and available in your `PATH`.
+
 Clone the repository:
 
-git clone [https://github.com/your-org/smartscribe.git](https://github.com/your-org/smartscribe.git)
-cd smartscribe
-
+```bash
+git clone https://github.com/Joshua-Omz/SmartScribe.git
+cd SmartScribe
+```
 
 Run the Go Backend:
-Ensure you have Go installed, then start the server:
 
+```bash
 cd backend
 go run main.go
+```
 
-
-The server will start on http://localhost:8080 and serve the frontend statically.
+The server starts on **http://localhost:8080** and automatically serves the frontend from the `frontend/` directory.
 
 Test the Client:
-Open your browser and navigate to http://localhost:8080. Grant microphone permissions, click "Start Recording," and dictate a clinical note.
+
+1. Open **http://localhost:8080** in your browser.
+2. Grant microphone permissions when prompted.
+3. Click **▶ Start Recording** and speak a clinical note.
+4. Click **⏹ Stop Recording** — the audio is sent to `POST /api/transcribe`.
+5. The transcription result appears on screen.
+
+Repository Structure:
+
+```
+SmartScribe/
+├── backend/
+│   ├── go.mod      # Go module definition
+│   └── main.go     # HTTP server + /api/transcribe endpoint
+├── frontend/
+│   ├── index.html  # Responsive UI with record controls
+│   └── app.js      # MediaRecorder API + fetch to backend
+└── README.md
+```
+
+API Reference:
+
+**POST /api/transcribe**
+
+Accepts a `multipart/form-data` request with the following field:
+
+| Field | Type        | Description                              |
+|-------|-------------|------------------------------------------|
+| audio | binary file | Audio recording (WebM/Opus from browser) |
+
+Returns JSON:
+
+```json
+{
+  "status": "success",
+  "text": "Patient has a mild fever."
+}
+```
 
 Built with ❤️ for the HelpMum Hackathon.
