@@ -1,6 +1,6 @@
 package main
 
-type transcribeResponse struct {
+type TranscriptionResponse struct {
 	Status string `json:"status"`
 	Text   string `json:"text"`
 }

@@ -31,7 +31,7 @@ func transcribeHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("received audio file: name=%q size=%d bytes content-type=%q",
 		header.Filename, header.Size, header.Header.Get("Content-Type"))
 
-	resp := transcribeResponse{
+	resp := TranscriptionResponse{
 		Status: "success",
 		Text:   "Patient has a mild fever.",
 	}
