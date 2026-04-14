@@ -38,6 +38,15 @@ Error responses (current):
 - Non-200 errors are plain text from `http.Error` (for example: `method not allowed`, `failed to parse multipart form`, `audio field missing from request`).
 - Frontend tries JSON parsing first and then falls back to generic failure messaging when no JSON error payload is available.
 
+Status-code behavior matrix:
+
+| Status code | Typical backend message | Frontend behavior |
+| --- | --- | --- |
+| `400` | `failed to parse multipart form` or `audio field missing from request` | Treated as transcription failure, then retry flow applies |
+| `405` | `method not allowed` | Treated as transcription failure, then retry flow applies |
+| `413` | plain-text payload too large response (if returned by middleware/server path) | Treated as transcription failure; user sees generic failure unless JSON payload is available |
+| `500` | plain-text internal server error response | Treated as transcription failure, then retry flow applies |
+
 ## State Machine
 Current app states:
 - `READY`
@@ -116,3 +125,11 @@ Behavior:
 - No transcription in real mode: confirm backend is running and `MOCK_MODE = false`.
 - Generic transcription failure: expected when backend returns plain-text non-200 errors.
 - Pending note not clearing: complete successful submit, discard pending note, or re-record to trigger full reset.
+
+## Known Gaps
+- Backend non-200 errors are currently plain text, which can limit detailed user-facing error specificity.
+- Frontend expects `status/text` on success but relies on fallback handling when non-JSON errors are returned.
+
+## Maintenance
+- Owner: Frontend team (SmartScribe)
+- Last updated: 2026-04-14
