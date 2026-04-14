@@ -71,6 +71,11 @@ SmartScribe/
 └── README.md
 ```
 
+## Frontend Integration Guide
+
+For frontend setup, behavior, and integration details, see frontend/docs/readme.md.
+The frontend is served by the Go backend at http://localhost:8080.
+
 API Reference:
 
 **POST /api/transcribe**
