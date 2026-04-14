@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SmartScribe WebM Recorder</title>
+</head>
+<body style="font-family: sans-serif; padding: 50px;">
+    <h2>Hackathon WebM Audio Recorder</h2>
+    <button id="start" style="padding: 10px; background: red; color: white;">Start Recording</button>
+    <button id="stop" style="padding: 10px; background: black; color: white;" disabled>Stop & Download</button>
+    <p id="status">Ready...</p>
+
+    <script>
+        let mediaRecorder;
+        let audioChunks = [];
+
+        document.getElementById('start').onclick = async () => {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+            
+            mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+            mediaRecorder.onstop = () => {
+                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                const audioUrl = URL.createObjectURL(audioBlob);
+                const a = document.createElement('a');
+                a.href = audioUrl;
+                a.download = 'smartscribe_test.webm';
+                a.click();
+                audioChunks = []; // reset
+            };
+
+            mediaRecorder.start();
+            document.getElementById('start').disabled = true;
+            document.getElementById('stop').disabled = false;
+            document.getElementById('status').innerText = "Recording... Speak into your mic!";
+        };
+
+        document.getElementById('stop').onclick = () => {
+            mediaRecorder.stop();
+            document.getElementById('start').disabled = false;
+            document.getElementById('stop').disabled = true;
+            document.getElementById('status').innerText = "Downloaded 'smartscribe_test.webm'!";
+        };
+    </script>
+</body>
+</html>

@@ -1,26 +1,34 @@
 package main
 
-
 import (
-	"fmt"
 	"log"
 	"net/http"
+	"os"
 )
 
-// transcribeResponse is the dummy structured response returned by the API.
-
-// transcribeHandler handles POST /api/transcribe.
-// It accepts a multipart/form-data audio upload, logs receipt, and returns a
-// dummy transcription result. No audio data is persisted to disk.
+type Server struct {
+	aiClient *AIClient
+}
 
 func main() {
-	// Serve the compiled frontend from the sibling frontend/ directory.
-	fs := http.FileServer(http.Dir("../frontend"))
-	http.Handle("/", fs)
+	transcribeModel_Key := os.Getenv("GOOGLE_STT_API_KEY")
+	llmKey := os.Getenv("LLM_API_KEY")
 
-	http.HandleFunc("/api/transcribe", transcribeHandler)
+	client, err := NewClient(transcribeModel_Key, llmKey)
 
-	addr := ":8080"
-	fmt.Printf("SmartScribe server listening on http://localhost%s\n", addr)
-	log.Fatal(http.ListenAndServe(addr, nil))
+	if err != nil {
+		log.Fatalf("Failed to initialize AI client: %v", err)
+	}
+
+	server := &Server{
+		aiClient: client,
+	}
+
+	// Register the handler function to the specific URL path
+	http.HandleFunc("/api/transcribe", server.handleTranscription)
+
+	log.Println("SmartScribe Gateway starting on port 8080...")
+
+	// Start the server. If it crashes, log.Fatal will print the error.
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }

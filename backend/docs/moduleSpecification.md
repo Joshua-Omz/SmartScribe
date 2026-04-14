@@ -1,43 +1,74 @@
-Backend Low-Level Specification (LLD)
+Final Backend Low-Level Specification (LLD)
 
-Project: SmartScribe (Go API Gateway)
+Project: SmartMRS Voice-to-Text (Go API Gateway)
 
-1. Core Architecture & Concurrency Model
+1. Architectural Role
 
-Following standard Go community practices outlined in Effective Go, the server will rely entirely on the net/http standard library.
+The Go backend acts exclusively as a secure, high-concurrency API Gateway and AI Orchestrator. It does not perform heavy computation itself; it routes data between the frontend, local OS scripts, external AI APIs, and the Java storage server.
 
-Concurrency: We will not manually manage thread pools. http.ListenAndServe will automatically spawn a new, lightweight Goroutine for every incoming audio stream from the frontend clients.
+2. The Complete Execution Pipeline (POST /api/transcribe)
 
-Memory Management: The server operates as a pass-through gateway. Audio data will be streamed via io.Reader/io.Writer interfaces where possible, rather than loading entire multi-megabyte files into RAM.
+When a request hits the main HTTP handler, the execution must follow this exact synchronous flow:
 
-2. API Contract
+Ingestion & Security Check:
 
-Endpoint: POST /api/transcribe
+Enforce http.MethodPost.
 
-Purpose: Receives raw audio from the Web/Mobile client, coordinates processing, and returns structured clinical data.
+Enforce 10MB payload limit via http.MaxBytesReader().
 
-Content-Type: multipart/form-data
+Parse multipart/form-data and extract the "audio" file.
 
-Payload Boundary: Field name strictly set to audio.
+OS-Level Compression (Zero-Storage Compliance):
 
-Response Content-Type: application/json
+Save raw audio to /tmp/raw_audio_[id].webm.
 
-Security: Enforced 10MB limit using http.MaxBytesReader() to prevent OOM attacks.
+Execute os/exec.Command("./compressor", "/tmp/raw_audio_[id].webm", "/tmp/compressed_[id].opus").
 
-3. Data Models (Struct Definitions)
+Wait for exit code 0.
 
-To ensure correct JSON serialization mapping with the Java mock server and the frontend, we use explicit struct tags (referencing the encoding/json standard library).
+defer os.Remove() on both temporary files.
 
-// TranscriptionResponse represents the final JSON sent back to the frontend.
+AI Step 1: Medical Speech-to-Text (Google Cloud):
 
+Read .opus file into a bytes.Buffer multipart payload.
+
+Send to Google Medical Speech-to-Text API.
+
+Extract the raw string: "Patient presents with..."
+
+AI Step 2: Clinical Structuring (Vax-Llama Cloud API):
+
+Wrap the raw string in a JSON payload ({"clinical_text": "...", "system_prompt": "..."}).
+
+POST to https://api.helpmum.org/v1/ai/structure.
+
+Decode the returned SOAP JSON.
+
+System of Record Sync (Java Mock Server):
+
+Construct the final clinical payload (Patient ID, Timestamp, SOAP Data).
+
+POST to http://localhost:8081/api/patient/notes (Java Spring Boot Server) with Bearer token.
+
+Ensure HTTP 201 Created is returned by Java.
+
+Client Response:
+
+Return HTTP 200 OK to the Frontend with the raw text and structured SOAP data.
+
+3. Core Data Structures (Go Structs)
+
+These define the exact JSON shapes expected across the system.
+
+// Response to Frontend
 type TranscriptionResponse struct {
 	Status      string `json:"status"`
 	RawText     string `json:"raw_text"`
 	Structured  SOAP   `json:"structured_data"`
-	ErrorMsg    string `json:"error,omitempty"` // Omitted if empty
+	Error       string `json:"error,omitempty"`
 }
 
-// SOAP represents the structured clinical format extracted by the NLP service.
+// SOAP Standard Format
 type SOAP struct {
 	Subjective string `json:"subjective"`
 	Objective  string `json:"objective"`
@@ -45,51 +76,33 @@ type SOAP struct {
 	Plan       string `json:"plan"`
 }
 
+// Request to Java SmartMRS Mock
+type SmartMRSSyncPayload struct {
+	PatientID    string `json:"patient_id"`
+	ProviderID   string `json:"provider_id"`
+	Timestamp    string `json:"timestamp"`
+	ClinicalData SOAP   `json:"clinical_data"`
+}
 
-4. The Request Processing Pipeline (Step-by-Step)
 
-Inside the handleTranscription HTTP handler, the execution flow must follow these precise steps:
+4. Required Environment Variables
 
-Method Validation: if r.Method != http.MethodPost -> Return 405 Method Not Allowed.
+Do not hardcode these in the final binary. Use os.Getenv().
 
-Size Limiting: Wrap the request body: r.Body = http.MaxBytesReader(w, r.Body, 10<<20).
+GOOGLE_STT_API_KEY: Credentials for Medical transcription.
 
-Multipart Parsing: Call err := r.ParseMultipartForm(10 << 20). If error, return 400 Bad Request.
+LLAMA_API_KEY: Credentials for HelpMum Vax-Llama structuring.
 
-File Extraction: Retrieve the file: file, header, err := r.FormFile("audio").
+JAVA_MOCK_TOKEN: Static bearer token to authenticate with Timi's server.
 
-Resource Cleanup: Immediately declare defer file.Close() to ensure OS file descriptors are released.
+PORT: Server port (default 8080).
 
-Hand-off to OS Script (C/C++ Integration): * Save the multipart.File to a temporary directory using os.CreateTemp.
+5. Final Directory Structure
 
-Use Go's os/exec standard package to invoke the OS Programmer's compression binary (e.g., ./compressor /tmp/audio.wav /tmp/audio.opus).
-
-defer os.Remove() on both temp files to guarantee zero-storage compliance (NDPR/HIPAA).
-
-External AI API Call: * Read the compressed .opus file.
-
-Construct a new http.Request to the Whisper/Speech-to-Text API.
-
-Use a custom http.Client{Timeout: 30 * time.Second} to ensure the request doesn't hang indefinitely.
-
-Response Formatting: * Parse the AI's response into the TranscriptionResponse struct.
-
-Stream the JSON to the client: json.NewEncoder(w).Encode(response).
-
-5. Integration Points
-
-Frontend Integration: The Go server will configure CORS (Cross-Origin Resource Sharing) headers if the frontend is hosted on a different port during local development: w.Header().Set("Access-Control-Allow-Origin", "*").
-
-SmartMRS Mock Integration: In the background (or as a separate Goroutine), the validated SOAP data will be marshaled into JSON and sent via http.Post to the Java Security Analyst's mock endpoint (http://mock-mrs:8081/api/notes).
-
-6. File Structure Convention
-
-To keep the hackathon code clean, we will follow a simplified version of the Go community's standard layout:
-
-/smartscribe
-├── /backend
-│   ├── main.go               # Server setup and router
-│   ├── handlers.go           # HTTP handler functions (handleTranscription)
-│   ├── ai_client.go          # Logic to communicate with Whisper API
-│   ├── compression.go        # Wrapper for os/exec calling the C++ script
-│   └── go.mod                # Module definition
+/smartscribe-backend
+├── main.go               # Router setup, MaxBytesReader, and server init
+├── handlers.go           # The pipeline execution logic (handleTranscription)
+├── compression.go        # Wrapper for os/exec calling the OS programmer's binary
+├── ai_client.go          # The two-step logic for Google STT and Vax-Llama NLP
+├── java_sync.go          # HTTP client logic to push data to the Spring Boot server
+└── go.mod
