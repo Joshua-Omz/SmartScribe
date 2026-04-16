@@ -11,6 +11,8 @@ RUN go mod download
 # Copy the source code
 COPY . .
 
+COPY .env .
+
 # Build the application
 RUN CGO_ENABLED=0 GOOS=linux go build -o main .
 
@@ -21,6 +23,8 @@ WORKDIR /app
 
 # Copy the pre-built binary file from the previous stage
 COPY --from=builder /app/main .
+# Copy .env file to the final image
+COPY --from=builder /app/.env .
 
 # Expose port 8080 to the outside world
 EXPOSE 8080

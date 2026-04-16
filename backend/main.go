@@ -4,6 +4,9 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
+
+	"github.com/joho/godotenv"
 )
 
 type Server struct {
@@ -11,8 +14,13 @@ type Server struct {
 }
 
 func main() {
+	godotenv.Overload() // Loads variables from .env file and overrides any blank host vars
 	transcribeModel_Key := os.Getenv("GOOGLE_STT_API_KEY")
 	llmKey := os.Getenv("LLM_API_KEY")
+
+	// Strip literal quotes if powershell accidentally included them
+	llmKey = strings.TrimSpace(strings.Trim(llmKey, "\""))
+	transcribeModel_Key = strings.TrimSpace(strings.Trim(transcribeModel_Key, "\""))
 
 	client, err := NewClient(transcribeModel_Key, llmKey)
 

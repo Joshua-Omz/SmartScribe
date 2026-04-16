@@ -68,8 +68,6 @@ func (s *Server) handleTranscription(w http.ResponseWriter, r *http.Request) {
 
 	// For testing purposes right now, just return a success message:
 	log.Printf("Audio securely ingested to temporary file: %s", tempFile.Name())
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(fmt.Sprintf("Audio securely ingested to %s and ready for AI processing.", tempFile.Name())))
 
 	// 8. Call the AI Client for Processing
 	rawText, err := s.aiClient.TranscribeMedicalAudioAudio(tempFile.Name())

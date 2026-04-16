@@ -1,6 +1,6 @@
 ﻿// Config
-const MOCK_MODE = true;
-const TRANSCRIBE_ENDPOINT = "/api/transcribe";
+const MOCK_MODE = false;
+const TRANSCRIBE_ENDPOINT = "http://localhost:8082/api/transcribe";
 const MAX_RECORDING_MS = 5 * 60 * 1000;
 const TRANSCRIBE_RETRIES = 2;
 const RETRY_DELAY_MS = 1500;
@@ -234,11 +234,11 @@ async function transcribeAudio(blob) {
     throw new Error(data.message || "Transcription failed.");
   }
 
-  if (!data.text || typeof data.text !== "string") {
+  if (!data.raw_text || typeof data.raw_text !== "string") {
     throw new Error("Transcription response did not include text.");
   }
 
-  return data.text;
+  return data.raw_text;
 }
 
 async function mockTranscribe() {

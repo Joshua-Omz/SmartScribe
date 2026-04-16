@@ -78,3 +78,39 @@ func TestHandleTranscription(t *testing.T) {
 		t.Errorf("Expected request to pass validation, but got 400 Bad Request. Body: %s", recorder.Body.String())
 	}
 }
+func TestLLMFallback(t *testing.T) {
+    // 1. Initialize the client with a deliberately broken LLM API key
+    // We'll provide a dummy STT key just to satisfy the constructor
+    brokenLLMKey := "invalid_key_to_force_error"
+    dummySTTKey := "dummy_stt_key"
+    
+    test_client, err := NewClient(dummySTTKey, brokenLLMKey)
+    if err != nil {
+        t.Fatalf("Failed to create test client: %v", err)
+    }
+
+    // 2. Define the raw text we want to process
+    rawText := "Patient presents with mild headache and fatigue. History of hypertension."
+
+    // 3. Call the StructureTextToSOAP method
+    soap, err := test_client.StructureTextToSOAP(rawText)
+
+    // 4. Assert that no error is returned (because we caught it and used the fallback)
+    if err != nil {
+        t.Fatalf("Expected no error due to fallback, but got: %v", err)
+    }
+
+    // 5. Assert that the fallback was properly populated
+    if soap == nil {
+        t.Fatal("Expected SOAP object to be returned, got nil")
+    }
+
+    // 6. Check that the predefined fallback fields are present
+    if soap.Subjective != "Unable to transcribe audio. This is a fallback SOAP note." {
+        t.Errorf("Expected fallback Subjective text, but got: %q", soap.Subjective)
+    }
+
+    if soap.Objective != "Audio transcription failed. No objective data available." {
+        t.Errorf("Expected fallback Objective text, but got: %q", soap.Objective)
+    }
+}
